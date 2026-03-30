@@ -36,15 +36,42 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const file = formData.get('file') as File
     if (!file) {
-      return NextResponse.json({ success: false, error: 'No file' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'No file selected' }, { status: 400 })
+    }
+
+    // Check file extension
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Please upload an Excel file (.xlsx or .xls)' 
+      }, { status: 400 })
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
+    
+    let workbook: XLSX.WorkBook
+    try {
+      workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
+    } catch {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid Excel file. Please upload a valid .xlsx or .xls file' 
+      }, { status: 400 })
+    }
+
     const sheets = workbook.SheetNames
+    if (sheets.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Excel file has no sheets' 
+      }, { status: 400 })
+    }
+
     let total = 0
     const sheetInfo: { name: string; records: number }[] = []
 
+    // Clear existing records
     await db.jobRecord.deleteMany()
 
     for (const sheetName of sheets) {
@@ -73,6 +100,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, totalRecords: total, sheets: sheetInfo })
   } catch (err) {
     console.error('Upload error:', err)
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Failed to process file. Please try again.' }, { status: 500 })
   }
 }
