@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Job Costing Records - stores data from all 5 sheets
+model JobRecord {
+  id          String   @id @default(cuid())
+  sheetName   String   // Which sheet this record came from (Sheet1, Sheet2, etc.)
+  vehicleNo   String   // Vehicle number for filtering
+  recordDate  DateTime // Date for filtering
+  rawData     String   // JSON string containing all other columns
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sheetName])
+  @@index([vehicleNo])
+  @@index([recordDate])
+}
+
+// Store uploaded file info
+model UploadedFile {
+  id          String   @id @default(cuid())
+  fileName    String
+  uploadDate  DateTime @default(now())
+  sheetCount  Int
+  recordCount Int
+}
